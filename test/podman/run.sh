@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Run one integration test mode in a rootless podman container under Xvfb.
-# Usage: test/podman/run.sh hints|error|install|lazystart
+# Usage: test/podman/run.sh hints|error|install|lazystart|nohints
 # Env:   SIMDREF_CATALOG  catalog.db file, mounted read-only (modes hints and lazystart)
 #        SIMDREF_SRC      simdref source tree with inlay hints (modes hints and lazystart build image vsc-sim from it)
 #        VSCODE_VERSION   VS Code version (default 1.140.0)
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-mode=${1:?usage: run.sh hints|error|install|lazystart}
+mode=${1:?usage: run.sh hints|error|install|lazystart|nohints}
 ver=${VSCODE_VERSION:-1.140.0}
 exe=.vscode-test/vscode-linux-x64-$ver/code
 low=(nice -n 19 ionice -c 3)
@@ -15,6 +15,7 @@ net=() mounts=()
 
 case $mode in
   hints | lazystart) image=vsc-sim ;;
+  nohints) image=vsc-stub ;;
   install) image=vsc-clean ;;
   error) image=vsc-clean net=(--network none) ;; # the extension must fail to download uv
   *) echo "unknown mode: $mode" >&2; exit 2 ;;
@@ -27,7 +28,8 @@ if [ "$image" = vsc-sim ]; then
   "${low[@]}" podman build --target sim --build-context "simdref=$SIMDREF_SRC" -t vsc-sim test/podman
   mounts=(-v "$SIMDREF_CATALOG:/home/node/.local/share/simdref/catalog.db:ro")
 else
-  "${low[@]}" podman build --target clean -t vsc-clean test/podman
+  target=${image#vsc-}
+  "${low[@]}" podman build --target "$target" -t "$image" test/podman
 fi
 
 # keep-id maps the host user to the container user node (uid 1000), so node can write the repo mount.

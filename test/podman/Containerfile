@@ -11,6 +11,13 @@ FROM base AS clean
 USER node
 WORKDIR /ext
 
+# Image vsc-stub: a fake simdref-lsp without inlayHintProvider (like simdref 0.0.7).
+FROM base AS stub
+COPY stub-lsp.js /usr/local/bin/simdref-lsp
+RUN chmod +x /usr/local/bin/simdref-lsp
+USER node
+WORKDIR /ext
+
 # Image vsc-sim: simdref-lsp from the named build context "simdref" (a simdref source tree).
 FROM base AS sim
 COPY --from=simdref . /tmp/simdref

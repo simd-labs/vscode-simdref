@@ -100,6 +100,16 @@ export async function run(): Promise<void> {
       assert.strictEqual(text().split(HELP).length - 1, 2, 'log lacks a second install attempt');
       break;
     }
+    case 'nohints': {
+      // F4: a simdref-lsp without inlayHintProvider (simdref 0.0.7) starts fine but gives no hints. The extension must warn.
+      const f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'simdref-nohint-')), 'x.s');
+      fs.writeFileSync(f, 'ret\n');
+      await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(f));
+      for (let i = 0; i < 60 && !text().includes('warning:'); i++) await sleep(1000);
+      assert.ok(text().includes('simdref-lsp started'), 'server did not start');
+      assert.match(text(), /warning: .* has no inlay hints/, 'log lacks the no-inlay-hints warning');
+      break;
+    }
     case 'lazystart': {
       // F1: a .txt file must not start the server or an install step; a .s file must.
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'simdref-lazy-'));

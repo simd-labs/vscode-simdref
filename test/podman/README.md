@@ -5,7 +5,7 @@ The container starts Xvfb, so the host needs no display. Do not pass `DISPLAY` o
 
 ## Files
 
-- `Containerfile` has two targets. `clean` is image `vsc-clean` without `simdref-lsp`. `sim` is image `vsc-sim` with `simdref-lsp` installed from a simdref source tree.
+- `Containerfile` has three targets. `clean` is image `vsc-clean` without `simdref-lsp`. `sim` is image `vsc-sim` with `simdref-lsp` installed from a simdref source tree. `stub` is image `vsc-stub` with a fake `simdref-lsp` that has no inlay hints.
 - `run.sh MODE` builds the image for the mode, prepares the repository, and runs the test.
 
 ## Run
@@ -16,6 +16,7 @@ The script removes the container at the end and exits with the exit code of the 
 
 ```
 test/podman/run.sh error
+test/podman/run.sh nohints
 test/podman/run.sh install
 SIMDREF_SRC=/path/to/simdref SIMDREF_CATALOG=/path/to/catalog.db test/podman/run.sh hints
 SIMDREF_SRC=/path/to/simdref SIMDREF_CATALOG=/path/to/catalog.db test/podman/run.sh lazystart
@@ -33,6 +34,7 @@ Success is exit code 0 and no assertion error in the output.
 | `hints` | `vsc-sim` | yes | `fixture.s` has hints on lines 0, 1 and 4. `fixture.cpp` has one hint on line 1. The `vaddps` hint contains `Add Packed`. |
 | `lazystart` | `vsc-sim` | yes | A `.txt` file does not start the server. Opening a `.s` file starts it, and the hints appear. |
 | `error` | `vsc-clean` | none | The install fails with the help text. A second matching file starts a second install attempt. |
+| `nohints` | `vsc-stub` | yes | A stub simdref-lsp without inlay hints (like simdref 0.0.7) starts, and the extension logs a warning. |
 | `install` | `vsc-clean` | yes | The extension downloads uv, installs simdref, runs `isa update` and starts the server. uv writes only to the extension storage. This mode downloads from GitHub and PyPI. |
 
 The `hints` log shows lines like `fixture.s [[0,"..."],[1,"Add Packed ..."],[4,"..."]]`.
