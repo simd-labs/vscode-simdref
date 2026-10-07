@@ -37,6 +37,8 @@ export function run(): void {
   for (const id of ['asm-intel-x86-generic', 'arm64', 'arm', 'riscv']) {
     assert.ok(defaults[`[${id}]`] || Object.keys(defaults).some((k) => k.includes(`[${id}]`)), `no default for ${id}`);
   }
+  // .s has no language without an assembly extension: VS Code assigns 'plaintext'.
+  assert.ok(Object.keys(defaults).some((k) => k.includes('[plaintext]')), 'no default for plaintext');
   console.log('find.unit: ok');
 }
 

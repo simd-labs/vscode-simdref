@@ -20,7 +20,7 @@
   ],
   "contributes": {
     "configurationDefaults": {
-      "[asm-intel-x86-generic][arm64][arm][riscv]": {
+      "[plaintext][asm-intel-x86-generic][arm64][arm][riscv]": {
         "editor.inlayHints.maximumLength": 0
       }
     }
