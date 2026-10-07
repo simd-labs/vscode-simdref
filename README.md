@@ -3,17 +3,24 @@
 ![simdref inlay hints in a .s file in VS Code](https://raw.githubusercontent.com/simd-labs/vscode-simdref/screenshots/vscode-asm.png)
 ![simdref inlay hints in a .cpp file in VS Code](https://raw.githubusercontent.com/simd-labs/vscode-simdref/screenshots/vscode-cpp.png)
 
-The extension connects VS Code to `simdref-lsp`, the language server of [simdref](https://github.com/simd-labs/simdref). In `.s`, `.S`, `.asm` files and `asm(...)` strings in C/C++, it shows a short description of each instruction inline.
+The extension connects VS Code to `simdref-lsp`, the language server of [simdref](https://github.com/simd-labs/simdref).
+In `.s`, `.S`, `.asm` files and `asm(...)` strings in C/C++, it shows a one-line brief of each instruction inline.
 
 Hover shows the full simdref page for an instruction from the local catalog.
 
-The extension installs simdref 0.0.8 or newer from PyPI.
-VS Code cuts hints at 43 characters (`editor.inlayHints.maximumLength`). The extension makes the limit `0` for assembly languages. Set it to `0` for C/C++ and files without an assembly extension.
+The extension installs the newest simdref from PyPI.
+VS Code cuts hints at 43 characters (`editor.inlayHints.maximumLength`).
+The extension makes the limit `0` for assembly languages.
+Set it to `0` for C/C++ and files without an assembly extension.
 The extension runs with cpptools or clangd for C and C++ files.
 
 ## Automatic install
 
-At start, the extension looks for `simdref-lsp` on `PATH`, then in the extension storage. An old `simdref-lsp` on `PATH` has no inlay hints. Remove it. If not found, the extension downloads `uv` into its storage, runs `uv tool install simdref` and `isa update`. The extension checks the uv download against the release checksum. All writes stay in the extension storage.
+At start, the extension looks for `simdref-lsp` on `PATH`, then in the extension storage.
+An old `simdref-lsp` on `PATH` has no inlay hints. Remove it.
+If not found, the extension downloads `uv` into its storage, runs `uv tool install simdref` and `isa update`.
+The extension checks the uv download against the release checksum.
+All writes stay in the extension storage.
 
 ## Manual install
 
