@@ -8,8 +8,8 @@ It shows a short description of each instruction at the end of the line. It work
 The server also gives hover text and completion.
 
 VS Code shows inlay hints by default (`editor.inlayHints.enabled`).
-Inlay hints need simdref 0.0.8 or newer (the current PyPI release has none).
-VS Code cuts hints at 43 characters for each line. Set `editor.inlayHints.maximumLength` to `0` to never truncate.
+Inlay hints need simdref 0.0.8 or newer (on PyPI). The extension installs it for you.
+VS Code cuts hints at 43 characters for each line (`editor.inlayHints.maximumLength`). The extension sets this limit to `0` (no limit) for assembly files. In C and C++ files, VS Code keeps your own value; set the limit to `0` there if a hint ends in `…`.
 The extension runs next to cpptools or clangd. Both servers answer for C and C++ files.
 
 ## Automatic install

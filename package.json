@@ -18,6 +18,20 @@
   "activationEvents": [
     "onStartupFinished"
   ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "assembly",
+        "aliases": ["Assembly", "assembly"],
+        "extensions": [".s", ".S", ".asm"]
+      }
+    ],
+    "configurationDefaults": {
+      "[assembly]": {
+        "editor.inlayHints.maximumLength": 0
+      }
+    }
+  },
   "main": "./out/src/extension.js",
   "scripts": {
     "compile": "tsc -p .",
