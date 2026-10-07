@@ -2,7 +2,7 @@
 # Run one integration test mode in a rootless podman container under Xvfb.
 # Usage: test/podman/run.sh hints|error|install|lazystart|nohints
 # Env:   SIMDREF_CATALOG  catalog.db file, mounted read-only (modes hints and lazystart)
-#        SIMDREF_SRC      simdref source tree with inlay hints (modes hints and lazystart build image vsc-sim from it)
+#        SIMDREF_SRC      simdref source tree, optional (modes hints and lazystart; without it, image vsc-sim gets simdref from PyPI)
 #        VSCODE_VERSION   VS Code version (default 1.140.0)
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -21,11 +21,13 @@ case $mode in
   *) echo "unknown mode: $mode" >&2; exit 2 ;;
 esac
 
-# The build uses the layer cache, so a repeat run costs a few seconds.
+# simdref from PyPI by default; pass SIMDREF_SRC to build vsc-sim from a source tree.
 if [ "$image" = vsc-sim ]; then
-  [ -d "${SIMDREF_SRC:-}" ] || { echo "set SIMDREF_SRC to a simdref source tree" >&2; exit 2; }
   [ -r "${SIMDREF_CATALOG:-}" ] || { echo "set SIMDREF_CATALOG to a catalog.db file" >&2; exit 2; }
-  "${low[@]}" podman build --target sim --build-context "simdref=$SIMDREF_SRC" -t vsc-sim test/podman
+  # BuildKit has no optional build context: pass an empty dir when SIMDREF_SRC is unset.
+  ctx=${SIMDREF_SRC:-}
+  if [ -z "$ctx" ]; then ctx=$(mktemp -d); fi
+  "${low[@]}" podman build --target sim --build-context "simdref=$ctx" -t vsc-sim test/podman
   mounts=(-v "$SIMDREF_CATALOG:/home/node/.local/share/simdref/catalog.db:ro")
 else
   target=${image#vsc-}

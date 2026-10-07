@@ -18,10 +18,16 @@ RUN chmod +x /usr/local/bin/simdref-lsp
 USER node
 WORKDIR /ext
 
-# Image vsc-sim: simdref-lsp from the named build context "simdref" (a simdref source tree).
+# Image vsc-sim: simdref-lsp from PyPI. When the build context "simdref" holds a source tree, install from it instead.
 FROM base AS sim
-COPY --from=simdref . /tmp/simdref
-RUN python3 -m venv /opt/sr && /opt/sr/bin/pip install --no-cache-dir /tmp/simdref \
-    && ln -s /opt/sr/bin/simdref-lsp /usr/local/bin/simdref-lsp && rm -rf /tmp/simdref
+COPY --from=simdref . /tmp/simdref-src/
+RUN python3 -m venv /opt/sr \
+    && if [ -f /tmp/simdref-src/pyproject.toml ]; then \
+         /opt/sr/bin/pip install --no-cache-dir /tmp/simdref-src; \
+       else \
+         /opt/sr/bin/pip install --no-cache-dir simdref; \
+       fi \
+    && rm -rf /tmp/simdref-src \
+    && ln -s /opt/sr/bin/simdref-lsp /usr/local/bin/simdref-lsp
 USER node
 WORKDIR /ext
