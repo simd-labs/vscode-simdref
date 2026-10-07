@@ -42,3 +42,7 @@ The `hints` log shows lines like `fixture.s [[0,"..."],[1,"Add Packed ..."],[4,"
 ## Options
 
 `VSCODE_VERSION` selects another VS Code version. Repeat runs reuse `node_modules/`, `out/` and `.vscode-test/` in the repository.
+
+## Update the screenshots
+
+To update the screenshots in the main README, replace the single commit on the `screenshots` branch. It is an orphan branch. Force-push it. Never commit PNGs to `main`.
