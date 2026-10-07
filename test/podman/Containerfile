@@ -1,0 +1,20 @@
+# Test images for the VS Code integration test. Build with --target clean or --target sim.
+FROM docker.io/library/node:22-bookworm-slim AS base
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      xvfb xauth python3 python3-venv python3-pip ca-certificates tar xz-utils \
+      libgtk-3-0 libnss3 libasound2 libgbm1 libxss1 libxkbfile1 libsecret-1-0 \
+      libatk-bridge2.0-0 libdrm2 libxtst6 libxshmfence1 libx11-xcb1 dbus \
+    && rm -rf /var/lib/apt/lists/*
+
+# Image vsc-clean: no simdref-lsp.
+FROM base AS clean
+USER node
+WORKDIR /ext
+
+# Image vsc-sim: simdref-lsp from the named build context "simdref" (a simdref source tree).
+FROM base AS sim
+COPY --from=simdref . /tmp/simdref
+RUN python3 -m venv /opt/sr && /opt/sr/bin/pip install --no-cache-dir /tmp/simdref \
+    && ln -s /opt/sr/bin/simdref-lsp /usr/local/bin/simdref-lsp && rm -rf /tmp/simdref
+USER node
+WORKDIR /ext
