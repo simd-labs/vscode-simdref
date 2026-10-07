@@ -9,7 +9,7 @@ The server also gives hover text and completion.
 
 VS Code shows inlay hints by default (`editor.inlayHints.enabled`).
 Inlay hints need simdref 0.0.8 or newer (on PyPI). The extension installs it for you.
-VS Code cuts hints at 43 characters for each line (`editor.inlayHints.maximumLength`). The extension sets this limit to `0` (no limit) for assembly files. In C and C++ files, VS Code keeps your own value; set the limit to `0` there if a hint ends in `…`.
+VS Code cuts each hint at 43 characters (`editor.inlayHints.maximumLength`). The extension sets this default to `0` (no limit) for the language ids `asm-intel-x86-generic`, `arm64`, `arm` and `riscv`. Other assembly ids keep your own value; set the limit to `0` there if a hint ends in `…`.
 The extension runs next to cpptools or clangd. Both servers answer for C and C++ files.
 
 ## Automatic install

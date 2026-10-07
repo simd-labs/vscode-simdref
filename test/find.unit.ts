@@ -22,6 +22,21 @@ export function run(): void {
   // Missing file matches on neither platform.
   assert.strictEqual(find('absent-lsp', [dir], 'win32'), undefined);
   assert.strictEqual(find('absent-lsp', [dir], 'linux'), undefined);
+
+  // package.json must not take over .s/.S/.asm with a grammar-less language id. The no-truncate
+  // default goes to the language ids that assembly extensions register (open-vsx manifests).
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
+  const langs = (pkg.contributes.languages ?? []) as { extensions?: string[] }[];
+  assert.ok(!langs.some((l) => (l.extensions ?? []).some((e) => ['.s', '.S', '.asm'].includes(e))), 'languages contribution claims .s/.S/.asm');
+  const defaults = pkg.contributes.configurationDefaults as Record<string, Record<string, unknown>>;
+  assert.ok(Object.keys(defaults).length > 0, 'no configurationDefaults');
+  for (const [k, v] of Object.entries(defaults)) {
+    assert.match(k, /^(\[[^\]]+\])+$/, `${k}: not a language-override key`);
+    assert.strictEqual(v['editor.inlayHints.maximumLength'], 0, `${k}: editor.inlayHints.maximumLength is not 0`);
+  }
+  for (const id of ['asm-intel-x86-generic', 'arm64', 'arm', 'riscv']) {
+    assert.ok(defaults[`[${id}]`] || Object.keys(defaults).some((k) => k.includes(`[${id}]`)), `no default for ${id}`);
+  }
   console.log('find.unit: ok');
 }
 

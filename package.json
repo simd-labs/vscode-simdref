@@ -19,15 +19,8 @@
     "onStartupFinished"
   ],
   "contributes": {
-    "languages": [
-      {
-        "id": "assembly",
-        "aliases": ["Assembly", "assembly"],
-        "extensions": [".s", ".S", ".asm"]
-      }
-    ],
     "configurationDefaults": {
-      "[assembly]": {
+      "[asm-intel-x86-generic][arm64][arm][riscv]": {
         "editor.inlayHints.maximumLength": 0
       }
     }
