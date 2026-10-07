@@ -48,10 +48,16 @@ async function install(dir: string, step: (m: string) => void): Promise<void> {
   const archive = path.join(dir, zip ? 'uv.zip' : 'uv.tar.gz');
   // A second window can download the same file at the same time. Write to a pid-suffixed file, then rename.
   const part = `${archive}.${process.pid}.part`;
-  fs.writeFileSync(part, data);
-  fs.renameSync(part, archive);
+  try {
+    fs.writeFileSync(part, data);
+    fs.renameSync(part, archive);
+  } catch (err) {
+    fs.rmSync(part, { force: true });
+    throw err;
+  }
   // The tar.gz holds one top-level folder; the zip is flat. Windows tar reads zip.
   await run('tar', ['-xf', archive, '-C', uvDir, ...(zip ? [] : ['--strip-components=1'])]);
+  fs.rmSync(archive, { force: true });
   const bin = path.join(dir, 'bin');
   // Keep every uv write inside the extension storage: tools, python builds, cache.
   const env = {
