@@ -18,7 +18,7 @@ export function uvEnv(dir: string): NodeJS.ProcessEnv {
   };
 }
 
-// Upgrade the extension-installed simdref at most once a day, refresh the catalog when the version
+// Upgrade the extension-installed simdref once a day, refresh the catalog when the version
 // changed, then restart the language client. A server from PATH is never touched. Failures are
 // logged, never shown; the stamp file limits retries to one per day.
 export async function maybeUpgrade(
@@ -35,13 +35,25 @@ export async function maybeUpgrade(
   } catch {
     // No stamp yet: first check.
   }
-  fs.writeFileSync(stamp, '');
   try {
+    fs.writeFileSync(stamp, '');
     const env = uvEnv(dir);
     const isa = path.join(bin, exe('isa'));
-    const before = (await run(isa, ['--version'], { env })).stdout.trim();
+    let before: string;
+    let after: string;
+    try {
+      before = (await run(isa, ['--version'], { env })).stdout.trim();
+    } catch (e) {
+      say(`simdref version check failed before upgrade: ${e instanceof Error ? e.message : String(e)}`);
+      return;
+    }
     await run(path.join(dir, 'uv', exe('uv')), ['tool', 'upgrade', 'simdref'], { env });
-    const after = (await run(isa, ['--version'], { env })).stdout.trim();
+    try {
+      after = (await run(isa, ['--version'], { env })).stdout.trim();
+    } catch (e) {
+      say(`simdref version check failed after upgrade: ${e instanceof Error ? e.message : String(e)}`);
+      return;
+    }
     if (before === after) return;
     // `isa vaddps --short` runs ensure_runtime(), which downloads the catalog only when the
     // installed version differs from the stamped one. An unchanged version downloads 0 bytes.

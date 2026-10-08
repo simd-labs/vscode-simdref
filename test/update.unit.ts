@@ -9,7 +9,7 @@ import { maybeUpgrade } from '../src/update';
 export async function run(): Promise<void> {
   const sh = (s: string) => `#!/bin/sh\n${s}\n`;
 
-  const setup = (uv: 'bump' | 'same' | 'fail') => {
+  const setup = (uv: 'bump' | 'same' | 'fail' | 'postfail') => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'simdref-upd-'));
     fs.mkdirSync(path.join(dir, 'bin'), { recursive: true });
     fs.mkdirSync(path.join(dir, 'uv'), { recursive: true });
@@ -17,16 +17,17 @@ export async function run(): Promise<void> {
     const write = (p: string, text: string) => fs.writeFileSync(p, sh(text), { mode: 0o755 });
     write(path.join(dir, 'bin', 'isa'), `
 echo "isa $*" >> "$LOG"
-if [ "$1" = "--version" ]; then cat "$DIR/version"; fi`);
+if [ "$1" = "--version" ]; then
+  if [ "${uv === 'postfail' ? '1' : '0'}" = "1" ] && [ -f "$DIR/upgraded" ]; then rm "$DIR/upgraded"; exit 1; fi
+  cat "$DIR/version"
+fi`);
     write(
       path.join(dir, 'uv', 'uv'),
-      uv === 'bump'
-        ? `
+      uv === 'fail'
+        ? 'echo "uv $*" >> "$LOG"; exit 1'
+        : `
 echo "uv $*" >> "$LOG"
-if [ "$1 $2 $3" = "tool upgrade simdref" ]; then echo 0.0.12 > "$DIR/version"; fi`
-        : uv === 'same'
-          ? 'echo "uv $*" >> "$LOG"'
-          : 'echo "uv $*" >> "$LOG"; exit 1',
+if [ "$1 $2 $3" = "tool upgrade simdref" ]; then${uv === 'same' ? '' : ' echo 0.0.12 > "$DIR/version";'}${uv === 'postfail' ? ' touch "$DIR/upgraded";' : ''} fi`,
     );
     const log = path.join(dir, 'calls.log');
     process.env.LOG = log;
@@ -83,6 +84,15 @@ if [ "$1 $2 $3" = "tool upgrade simdref" ]; then echo 0.0.12 > "$DIR/version"; f
     await t.call();
     assert.ok(t.said.some((m) => m.includes('auto-update failed')), `failure not logged: ${t.said}`);
     assert.ok(!t.lines().some((l) => l.startsWith('isa vaddps')), `failed upgrade must not refresh: ${t.lines()}`);
+    assert.strictEqual(t.restarts(), 0);
+  }
+
+  // isa --version fails after the upgrade: no refresh, no restart, logged via say only.
+  {
+    const t = setup('postfail');
+    await t.call();
+    assert.ok(t.said.some((m) => m.includes('version check failed after upgrade')), `post-upgrade version failure not logged: ${t.said}`);
+    assert.ok(!t.lines().some((l) => l.startsWith('isa vaddps')), `failed version check must not refresh: ${t.lines()}`);
     assert.strictEqual(t.restarts(), 0);
   }
 
