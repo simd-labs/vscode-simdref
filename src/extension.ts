@@ -96,8 +96,11 @@ async function start(dir: string, out: vscode.LogOutputChannel, say: (m: string)
     await client.start();
     say('simdref-lsp started');
     // Daily background upgrade of the extension-installed copy; never blocks the start.
+    // The client identity check skips a restart when deactivate ran during the upgrade.
+    const started = client;
     void maybeUpgrade(dir, server, say, async () => {
-      await client?.restart();
+      if (client !== started) return;
+      await client.restart();
       say('simdref-lsp restarted after upgrade');
     });
     // An old simdref-lsp (0.0.7 or older) on PATH has no inlay hints and fails silently. Check the capability once.
@@ -145,4 +148,5 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<{ log: str
 export async function deactivate(): Promise<void> {
   // ponytail: install may outlive deactivate; globalStorage survives, next launch's find() picks it up. Add a disposed flag only if the orphan install writes break things.
   await client?.stop();
+  client = undefined;
 }
