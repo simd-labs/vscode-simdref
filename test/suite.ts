@@ -5,6 +5,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { run as findUnit } from './find.unit';
+import { run as updateUnit } from './update.unit';
 
 // SIMDREF_MODE: hints (default) | install | error | lazystart. SHOT_DIR: save screenshots there.
 const ASM = [
@@ -62,6 +63,7 @@ async function check(dir: string, name: string, text: string, expected: number[]
 
 export async function run(): Promise<void> {
   findUnit();
+  await updateUnit();
   const ext = vscode.extensions.getExtension('simd-labs.vscode-simdref');
   assert.ok(ext, 'extension not found');
   const { log, HELP } = (await ext.activate()) as { log: string[]; HELP: string };

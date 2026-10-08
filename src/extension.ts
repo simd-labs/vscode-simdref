@@ -6,6 +6,7 @@ import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { exe, find } from './find';
+import { maybeUpgrade, uvEnv } from './update';
 
 const run = promisify(execFile);
 const URL = 'https://github.com/simd-labs/simdref';
@@ -60,13 +61,7 @@ async function install(dir: string, step: (m: string) => void): Promise<void> {
   fs.rmSync(archive, { force: true });
   const bin = path.join(dir, 'bin');
   // Keep every uv write inside the extension storage: tools, python builds, cache.
-  const env = {
-    ...process.env,
-    UV_TOOL_DIR: path.join(dir, 'tools'),
-    UV_TOOL_BIN_DIR: bin,
-    UV_PYTHON_INSTALL_DIR: path.join(dir, 'python'),
-    UV_CACHE_DIR: path.join(dir, 'cache'),
-  };
+  const env = uvEnv(dir);
   step('installing simdref');
   await run(path.join(uvDir, exe('uv')), ['tool', 'install', 'simdref'], { env });
   step('running isa update');
@@ -100,6 +95,11 @@ async function start(dir: string, out: vscode.LogOutputChannel, say: (m: string)
     client = new LanguageClient('simdref', { command: server }, { documentSelector: DOCUMENT_SELECTOR as import('vscode-languageclient/node').DocumentSelector, outputChannel: out });
     await client.start();
     say('simdref-lsp started');
+    // Daily background upgrade of the extension-installed copy; never blocks the start.
+    void maybeUpgrade(dir, server, say, async () => {
+      await client?.restart();
+      say('simdref-lsp restarted after upgrade');
+    });
     // An old simdref-lsp (0.0.7 or older) on PATH has no inlay hints and fails silently. Check the capability once.
     if (!client.initializeResult?.capabilities.inlayHintProvider) {
       say(`warning: ${server} has no inlay hints`);
