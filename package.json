@@ -4,6 +4,7 @@
   "description": "SIMD and assembly instruction reference: inlay hints and hover from simdref-lsp.",
   "version": "0.0.1",
   "publisher": "simd-labs",
+  "icon": "icon.png",
   "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",
