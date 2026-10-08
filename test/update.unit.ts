@@ -55,7 +55,7 @@ if [ "$1 $2 $3" = "tool upgrade simdref" ]; then echo 0.0.12 > "$DIR/version"; f
   {
     const t = setup('bump');
     await t.call();
-    assert.strictEqual(t.lines().filter((l) => l === 'isa vaddps --json').length, 1, `refresh must run once: ${t.lines()}`);
+    assert.strictEqual(t.lines().filter((l) => l === 'isa vaddps --short').length, 1, `refresh must run once: ${t.lines()}`);
     assert.strictEqual(t.restarts(), 1, 'restart must run once');
     assert.ok(fs.existsSync(t.stamp), 'stamp not written');
   }

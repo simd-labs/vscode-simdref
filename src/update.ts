@@ -43,9 +43,9 @@ export async function maybeUpgrade(
     await run(path.join(dir, 'uv', exe('uv')), ['tool', 'upgrade', 'simdref'], { env });
     const after = (await run(isa, ['--version'], { env })).stdout.trim();
     if (before === after) return;
-    // `isa vaddps --json` runs ensure_runtime(), which downloads the catalog only when the
+    // `isa vaddps --short` runs ensure_runtime(), which downloads the catalog only when the
     // installed version differs from the stamped one. An unchanged version downloads 0 bytes.
-    await run(isa, ['vaddps', '--json'], { env });
+    await run(isa, ['vaddps', '--short'], { env });
     say(`simdref upgraded ${before} -> ${after}`);
     await restart();
   } catch (e) {
