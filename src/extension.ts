@@ -146,7 +146,9 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<{ log: str
 }
 
 export async function deactivate(): Promise<void> {
-  // ponytail: install may outlive deactivate; globalStorage survives, next launch's find() picks it up. Add a disposed flag only if the orphan install writes break things.
-  await client?.stop();
+  // A stopped client must not be a restart target for an upgrade finishing during shutdown:
+  // clear it before awaiting stop, not after.
+  const c = client;
   client = undefined;
+  await c?.stop();
 }
