@@ -58,8 +58,8 @@ fi`;
     process.env.LOG = log;
     process.env.DIR = dir;
     const server = path.join(dir, 'bin', 'simdref-lsp');
-    const stamp = path.join(dir, 'last-update-check');
-    const lock = path.join(dir, 'update.lock');
+    const day = Math.floor(Date.now() / 1000 / 86400);
+    const marker = path.join(dir, `update-${day}`);
     let restarts = 0;
     const said: string[] = [];
     const call = () =>
@@ -67,7 +67,7 @@ fi`;
         restarts++;
       });
     const lines = () => (fs.existsSync(log) ? fs.readFileSync(log, 'utf8').trim().split('\n') : []);
-    return { dir, call, lines, stamp, lock, server, restarts: () => restarts, said };
+    return { dir, call, lines, marker, server, restarts: () => restarts, said };
   };
 
   // Positive control: the fake binaries exist and maybeUpgrade reaches them.
@@ -78,21 +78,32 @@ fi`;
     assert.ok(t.lines().includes('uv tool upgrade simdref'), `no upgrade: ${t.lines()}`);
   }
 
-  // Old stamp, version changes: upgrade, one catalog refresh, one restart, stamp written.
+  // No marker: runs, creates today's marker, removes yesterday's.
+  {
+    const t = setup('bump');
+    const yesterday = Math.floor(Date.now() / 1000 / 86400) - 1;
+    const old = path.join(t.dir, `update-${yesterday}`);
+    fs.writeFileSync(old, '');
+    await t.call();
+    assert.ok(fs.existsSync(t.marker), `today's marker not created`);
+    assert.ok(!fs.existsSync(old), `yesterday's marker not removed`);
+  }
+
+  // Today's marker exists: skip everything.
+  {
+    const t = setup('bump');
+    fs.writeFileSync(t.marker, '');
+    await t.call();
+    assert.deepStrictEqual(t.lines(), [], `today's marker must skip: ${t.lines()}`);
+  }
+
+  // Old marker, version changes: upgrade, one catalog refresh, one restart.
   {
     const t = setup('bump');
     await t.call();
     assert.strictEqual(t.lines().filter((l) => l === 'isa vaddps --short').length, 1, `refresh must run once: ${t.lines()}`);
     assert.strictEqual(t.restarts(), 1, 'restart must run once');
-    assert.ok(fs.existsSync(t.stamp), 'stamp not written');
-  }
-
-  // Fresh stamp: skip everything.
-  {
-    const t = setup('bump');
-    fs.writeFileSync(t.stamp, '');
-    await t.call();
-    assert.deepStrictEqual(t.lines(), [], `fresh stamp must skip: ${t.lines()}`);
+    assert.ok(fs.existsSync(t.marker), 'marker not written');
   }
 
   // Unchanged version: upgrade and refresh run once, no restart.
@@ -154,29 +165,31 @@ fi`;
     assert.strictEqual(t.restarts(), 0, 'no restart while versions are unreadable');
   }
 
-  // Fresh update.lock: another window runs the check; nothing runs and the stamp is untouched.
+  // Refresh fails after a version change: the restart still happens once.
   {
     const t = setup('bump');
-    fs.writeFileSync(t.lock, '');
+    fs.writeFileSync(
+      path.join(t.dir, 'bin', 'isa'),
+      sh(`
+echo "isa $*" >> "$LOG"
+if [ "$1" = "--version" ]; then
+  cat "$DIR/version"
+fi
+if [ "$1" = "vaddps" ]; then
+  exit 1
+fi`),
+      { mode: 0o755 },
+    );
     await t.call();
-    assert.deepStrictEqual(t.lines(), [], `fresh lock must skip: ${t.lines()}`);
-    assert.ok(!fs.existsSync(t.stamp), 'fresh lock must not write the stamp');
-    assert.ok(fs.existsSync(t.lock), 'a foreign fresh lock must remain');
+    assert.strictEqual(
+      t.lines().filter((l) => l === 'isa vaddps --short').length,
+      1,
+      `refresh must run once: ${t.lines()}`,
+    );
+    assert.strictEqual(t.restarts(), 1, 'refresh failure must not skip the restart');
   }
 
-  // Stale update.lock (older than 30 min): taken over, upgrade runs.
-  {
-    const t = setup('bump');
-    fs.writeFileSync(t.lock, '');
-    const old = new Date(Date.now() - 31 * 60 * 1000);
-    fs.utimesSync(t.lock, old, old);
-    await t.call();
-    assert.ok(t.lines().includes('uv tool upgrade simdref'), `stale lock must be taken over: ${t.lines()}`);
-    assert.strictEqual(t.restarts(), 1);
-    assert.ok(!fs.existsSync(t.lock), 'lock must be removed after the check');
-  }
-
-  // PATH install: no binary runs, no stamp, no restart.
+  // PATH install: no binary runs, no marker, no restart.
   {
     const t = setup('bump');
     let restarts = 0;
@@ -189,7 +202,7 @@ fi`;
       },
     );
     assert.deepStrictEqual(t.lines(), [], 'PATH install must not be upgraded');
-    assert.ok(!fs.existsSync(t.stamp), 'PATH install must not write the stamp');
+    assert.ok(!fs.existsSync(t.marker), 'PATH install must not write the marker');
     assert.strictEqual(restarts, 0);
   }
 
