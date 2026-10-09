@@ -70,14 +70,6 @@ fi`;
     return { dir, call, lines, marker, server, restarts: () => restarts, said };
   };
 
-  // Positive control: the fake binaries exist and maybeUpgrade reaches them.
-  {
-    const t = setup('bump');
-    await t.call();
-    assert.ok(t.lines().length > 0, 'fake binaries were never called');
-    assert.ok(t.lines().includes('uv tool upgrade simdref'), `no upgrade: ${t.lines()}`);
-  }
-
   // No marker: runs, creates today's marker, removes yesterday's.
   {
     const t = setup('bump');

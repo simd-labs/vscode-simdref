@@ -44,9 +44,7 @@ export async function maybeUpgrade(
     if (f.startsWith('update-') && f !== `update-${day}`) {
       try {
         fs.rmSync(path.join(dir, f), { force: true });
-      } catch {
-        // Old markers are best-effort cleanup.
-      }
+      } catch {}
     }
   }
   const env = uvEnv(dir);
