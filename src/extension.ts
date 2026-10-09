@@ -98,11 +98,12 @@ async function start(dir: string, out: vscode.LogOutputChannel, say: (m: string)
     // Daily background upgrade of the extension-installed copy; never blocks the start.
     // The client identity check skips a restart when deactivate ran during the upgrade.
     const started = client;
+    // The background task never rejects; this catch is the boundary if that rule ever breaks.
     void maybeUpgrade(dir, server, say, async () => {
       if (client !== started) return;
       await client.restart();
       say('simdref-lsp restarted after upgrade');
-    });
+    }).catch((e) => say(`simdref upgrade task failed: ${e instanceof Error ? e.message : String(e)}`));
     // An old simdref-lsp (0.0.7 or older) on PATH has no inlay hints and fails silently. Check the capability once.
     if (!client.initializeResult?.capabilities.inlayHintProvider) {
       say(`warning: ${server} has no inlay hints`);

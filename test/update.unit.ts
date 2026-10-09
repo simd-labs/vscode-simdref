@@ -181,6 +181,28 @@ fi`),
     assert.strictEqual(t.restarts(), 1, 'refresh failure must not skip the restart');
   }
 
+  // A restart that rejects after a version change: maybeUpgrade resolves, the failure is logged.
+  {
+    const t = setup('bump');
+    let restarts = 0;
+    const boom = new Error('boom');
+    let escaped: unknown = null;
+    try {
+      await maybeUpgrade(t.dir, t.server, (m) => t.said.push(m), async () => {
+        restarts++;
+        throw boom;
+      });
+    } catch (e) {
+      escaped = e;
+    }
+    assert.strictEqual(escaped, null, 'maybeUpgrade must never reject on restart failure');
+    assert.strictEqual(restarts, 1, 'restart must have run once');
+    assert.ok(
+      t.said.some((m) => m.includes('restart failed') && m.includes('boom')),
+      `restart failure not logged: ${t.said}`,
+    );
+  }
+
   // PATH install: no binary runs, no marker, no restart.
   {
     const t = setup('bump');

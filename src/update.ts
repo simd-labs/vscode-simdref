@@ -74,5 +74,9 @@ export async function maybeUpgrade(
   }
   if (after === null || after === before) return;
   say(`simdref upgraded ${before} -> ${after}`);
-  await restart();
+  try {
+    await restart();
+  } catch (e) {
+    say(`simdref-lsp restart failed: ${e instanceof Error ? e.message : String(e)}`);
+  }
 }
