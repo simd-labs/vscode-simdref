@@ -21,6 +21,7 @@ An old `simdref-lsp` on `PATH` has no inlay hints. Remove it.
 If not found, the extension downloads `uv` into its storage, runs `uv tool install simdref` and `isa update`.
 The extension checks the uv download against the release checksum.
 All writes stay in the extension storage.
+Once a day the extension upgrades simdref in the background. The new version is used after the editor reloads.
 
 ## Manual install
 
