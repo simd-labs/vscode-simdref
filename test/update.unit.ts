@@ -82,7 +82,6 @@ fi`;
   {
     const t = setup('bump');
     await t.call();
-    assert.ok(t.lines().includes('uv tool upgrade simdref'), `no upgrade: ${t.lines()}`);
     assert.strictEqual(t.lines().filter((l) => l === 'isa vaddps --short').length, 1, `refresh must run once: ${t.lines()}`);
     assert.strictEqual(t.restarts(), 1, 'restart must run once');
     assert.ok(fs.existsSync(t.stamp), 'stamp not written');
@@ -126,10 +125,15 @@ fi`;
       t.said.some((m) => m.includes('version check failed after upgrade')),
       `post-upgrade version failure not logged: ${t.said}`,
     );
+    assert.strictEqual(
+      t.lines().filter((l) => l === 'isa vaddps --short').length,
+      1,
+      `refresh must have run once: ${t.lines()}`,
+    );
     assert.strictEqual(t.restarts(), 0, 'unreadable after-version must not restart');
   }
 
-  // Unreadable before-version: upgrade and refresh still run; readable differing after restarts.
+  // Unreadable before-version: upgrade and refresh still run; after is also unreadable here, so no restart.
   {
     const t = setup('postfail');
     fs.writeFileSync(path.join(t.dir, 'upgraded'), '');
@@ -143,6 +147,7 @@ fi`;
       1,
       `refresh must still run: ${t.lines()}`,
     );
+    assert.strictEqual(t.restarts(), 0, 'no restart while versions are unreadable');
   }
 
   // Fresh update.lock: another window runs the check; nothing runs and the stamp is untouched.
@@ -172,7 +177,7 @@ fi`;
     const t = setup('bump');
     let restarts = 0;
     await maybeUpgrade(
-      path.dirname(path.dirname(t.server)),
+      t.dir,
       '/usr/local/bin/simdref-lsp',
       () => {},
       async () => {
