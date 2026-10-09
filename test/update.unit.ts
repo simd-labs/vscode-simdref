@@ -108,12 +108,16 @@ fi`;
     assert.strictEqual(t.restarts(), 0, 'unchanged version must not restart');
   }
 
-  // uv fails (offline): the failure is logged via say, never thrown, no refresh, no restart.
+  // uv fails (offline): the failure is logged via say, never thrown, the refresh still runs, no restart.
   {
     const t = setup('fail');
     await t.call();
-    assert.ok(t.said.some((m) => m.includes('auto-update failed')), `failure not logged: ${t.said}`);
-    assert.ok(!t.lines().some((l) => l.startsWith('isa vaddps')), `failed upgrade must not refresh: ${t.lines()}`);
+    assert.ok(t.said.some((m) => m.includes('upgrade failed')), `failure not logged: ${t.said}`);
+    assert.strictEqual(
+      t.lines().filter((l) => l === 'isa vaddps --short').length,
+      1,
+      `failed upgrade must still refresh once: ${t.lines()}`,
+    );
     assert.strictEqual(t.restarts(), 0);
   }
 

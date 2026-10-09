@@ -61,8 +61,12 @@ export async function maybeUpgrade(
     } catch (e) {
       say(`simdref version check failed before upgrade: ${e instanceof Error ? e.message : String(e)}`);
     }
-    await run(path.join(dir, 'uv', exe('uv')), ['tool', 'upgrade', 'simdref'], { env, timeout: TIMEOUT_MS });
-    // Downloads the catalog after a version change. An unchanged catalog costs 0.4 s, 0 bytes.
+    try {
+      await run(path.join(dir, 'uv', exe('uv')), ['tool', 'upgrade', 'simdref'], { env, timeout: TIMEOUT_MS });
+    } catch (e) {
+      say(`simdref upgrade failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    // Downloads the catalog after a version change. Runs on every check: an unchanged catalog costs 0.4 s, 0 bytes.
     await run(isa, ['vaddps', '--short'], { env, timeout: TIMEOUT_MS });
     let after: string | null = null;
     try {
