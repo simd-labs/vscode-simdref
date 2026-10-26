@@ -23,24 +23,27 @@ The extension checks the uv download against the release checksum.
 All writes stay in the extension storage.
 Once a day the extension upgrades simdref in the background. The new version is used after the editor reloads.
 
-## Manual install
+## Install
+
+```
+git clone https://github.com/simd-labs/vscode-simdref
+cd vscode-simdref
+npm install
+npm run compile
+npx @vscode/vsce package
+code --install-extension vscode-simdref-*.vsix
+```
+
+The server install is optional. The extension installs `simdref` on start when `simdref-lsp` is missing.
+To install the server on `PATH`, run:
 
 ```
 uv tool install simdref
 isa update
 ```
 
-Then start VS Code again (the server opens the catalog only at start).
-Or `pip install simdref`, then start VS Code again.
-
-## Development install
-
-```
-npm install
-npm run compile
-npx @vscode/vsce package
-code --install-extension vscode-simdref-*.vsix
-```
+After the install, start VS Code again. The server opens the catalog only at start.
+`pip install simdref` also works.
 
 ## License
 
