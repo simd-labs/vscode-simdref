@@ -1,7 +1,7 @@
 # vscode-simdref
 
-![simdref inlay hints in a .s file in VS Code](https://raw.githubusercontent.com/simd-labs/vscode-simdref/screenshots/vscode-asm.png)
-![simdref inlay hints in a .cpp file in VS Code](https://raw.githubusercontent.com/simd-labs/vscode-simdref/screenshots/vscode-cpp.png)
+![simdref inlay hints in a .s file in VS Code](https://raw.githubusercontent.com/simd-labs/vscode-simdref/862c315e5fee83e9ba9599eeca5c0fc45c433b2f/vscode-asm.png)
+![simdref inlay hints in a .cpp file in VS Code](https://raw.githubusercontent.com/simd-labs/vscode-simdref/862c315e5fee83e9ba9599eeca5c0fc45c433b2f/vscode-cpp.png)
 
 The extension connects VS Code to `simdref-lsp`, the language server of [simdref](https://github.com/simd-labs/simdref).
 In `.s`, `.S`, `.asm` files and `asm(...)` strings in C/C++, it shows a one-line brief of each instruction inline.

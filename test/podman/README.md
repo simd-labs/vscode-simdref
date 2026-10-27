@@ -42,6 +42,7 @@ Success is exit code 0 and no assertion error. A `hints` line looks like `fixtur
 
 ## Update the screenshots
 
-To update the screenshots in the main README, replace the single commit on the `screenshots` branch.
-Push it with `--force`.
+To update the screenshots in the main README, replace the single commit at `refs/assets/screenshots`.
+Push it with `--force` to that ref.
+Point the README links at the new commit sha.
 Do not commit PNGs to `main`.
