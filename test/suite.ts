@@ -19,6 +19,8 @@ const ASM = [
 const ASM_HINT_LINES = [0, 1, 4];
 const CPP = ['int main() {', '  asm volatile("vaddps %ymm1, %ymm2, %ymm0");', '  return 0;', '}', ''].join('\n');
 const CPP_HINT_LINES = [1];
+const CU = ['__global__ void k() {', '  asm("vaddps %ymm1, %ymm2, %ymm0");', '}'].join('\n');
+const CU_HINT_LINES = [1];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -141,6 +143,7 @@ export async function run(): Promise<void> {
       assert.ok(text().includes('simdref-lsp started'), 'server did not start');
       await check(dir, 'fixture.s', ASM, ASM_HINT_LINES);
       await check(dir, 'fixture.cpp', CPP, CPP_HINT_LINES);
+      await check(dir, 'fixture.cu', CU, CU_HINT_LINES);
     }
   }
 }

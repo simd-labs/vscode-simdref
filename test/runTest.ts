@@ -9,11 +9,10 @@ runTests({
   cachePath: process.env.VSCODE_CACHE,
   vscodeExecutablePath: process.env.VSCODE_EXE,
   extensionDevelopmentPath: path.resolve(__dirname, '../..'),
-  extensionTestsPath: path.resolve(__dirname, 'suite'),
+  extensionTestsPath: process.env.SHOT === '1' ? path.resolve(__dirname, 'shot') : path.resolve(__dirname, 'suite'),
   launchArgs: [
     '--no-sandbox',
     '--disable-gpu',
-    '--disable-extensions',
     '--disable-workspace-trust',
     '--skip-welcome',
     '--skip-release-notes',

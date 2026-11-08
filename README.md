@@ -1,18 +1,23 @@
 # vscode-simdref
 
-![simdref inlay hints in a .s file in VS Code](https://raw.githubusercontent.com/simd-labs/vscode-simdref/862c315e5fee83e9ba9599eeca5c0fc45c433b2f/vscode-asm.png)
-![simdref inlay hints in a .cpp file in VS Code](https://raw.githubusercontent.com/simd-labs/vscode-simdref/862c315e5fee83e9ba9599eeca5c0fc45c433b2f/vscode-cpp.png)
+![simdref inlay hints in a .s file in VS Code](https://raw.githubusercontent.com/simd-labs/vscode-simdref/581d5d5712e8a723994b5acc5fc69d5f3872f732/vscode-asm.png)
+![simdref hover on a .s file in VS Code](https://raw.githubusercontent.com/simd-labs/vscode-simdref/581d5d5712e8a723994b5acc5fc69d5f3872f732/vscode-asm-hover.png)
+![simdref inlay hints in a .cpp file in VS Code](https://raw.githubusercontent.com/simd-labs/vscode-simdref/581d5d5712e8a723994b5acc5fc69d5f3872f732/vscode-cpp.png)
+![simdref hover on a .cpp file in VS Code](https://raw.githubusercontent.com/simd-labs/vscode-simdref/581d5d5712e8a723994b5acc5fc69d5f3872f732/vscode-cpp-hover.png)
 
 The extension connects VS Code to `simdref-lsp`, the language server of [simdref](https://github.com/simd-labs/simdref).
 In `.s`, `.S`, `.asm` files and `asm(...)` strings in C/C++, it shows a one-line brief of each instruction inline.
+In CUDA files (`.cu`, `.cuh`), it shows the same brief.
+VS Code has no NASM language, so `.nasm` files get no hints.
 
 Hover shows the full simdref page for an instruction from the local catalog.
 
 The extension installs the newest simdref from PyPI.
 VS Code cuts hints at 43 characters (`editor.inlayHints.maximumLength`).
-The extension makes the limit `0` for assembly languages.
+The extension makes the limit `0` for the assembly and CUDA language ids.
 Set it to `0` for C/C++ and files without an assembly extension.
-The extension runs with cpptools or clangd for C and C++ files.
+The extension has no settings.
+The extension runs with cpptools or clangd for C, C++ and CUDA files.
 
 ## Automatic install
 
@@ -21,7 +26,8 @@ An old `simdref-lsp` on `PATH` has no inlay hints. Remove it.
 If not found, the extension downloads `uv` into its storage, runs `uv tool install simdref` and `isa update`.
 The extension checks the uv download against the release checksum.
 All writes stay in the extension storage.
-Once a day the extension upgrades simdref in the background. The new version is used after the editor reloads.
+The extension upgrades simdref in the background every day. A new simdref version takes effect at the next server start.
+Reload the window to start a new server.
 
 ## Install
 

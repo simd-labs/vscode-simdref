@@ -35,10 +35,10 @@ export async function run(): Promise<void> {
     const server = path.join(dir, 'bin', 'simdref-lsp');
     const day = Math.floor(Date.now() / 1000 / 86400);
     const marker = path.join(dir, `update-${day}`);
-    const said: string[] = [];
-    const call = () => maybeUpgrade(dir, server, (m) => said.push(m));
+    const warned: string[] = [];
+    const call = () => maybeUpgrade(dir, server, (m) => warned.push(m));
     const lines = () => (fs.existsSync(log) ? fs.readFileSync(log, 'utf8').trim().split('\n') : []);
-    return { dir, call, lines, marker, server, said };
+    return { dir, call, lines, marker, server, warned };
   };
 
   // No marker: upgrade runs, then one catalog refresh; today's marker is created, yesterday's removed.
@@ -66,7 +66,7 @@ export async function run(): Promise<void> {
     assert.deepStrictEqual(t.lines(), [], `today's marker must skip: ${t.lines()}`);
   }
 
-  // uv fails (offline): the failure is logged, never thrown, the refresh still runs.
+  // uv fails (offline): the failure is logged at warn, never thrown, the refresh still runs.
   {
     const t = setup('fail');
     let escaped: unknown = null;
@@ -76,7 +76,7 @@ export async function run(): Promise<void> {
       escaped = e;
     }
     assert.strictEqual(escaped, null, 'maybeUpgrade must never reject on upgrade failure');
-    assert.ok(t.said.some((m) => m.includes('upgrade failed')), `failure not logged: ${t.said}`);
+    assert.ok(t.warned.some((m) => m.includes('upgrade failed')), `failure not logged at warn: ${t.warned}`);
     assert.strictEqual(
       t.lines().filter((l) => l === 'isa vaddps --short').length,
       1,
@@ -84,7 +84,7 @@ export async function run(): Promise<void> {
     );
   }
 
-  // The refresh fails: the failure is logged, maybeUpgrade resolves.
+  // The refresh fails: the failure is logged at warn, maybeUpgrade resolves.
   {
     const t = setup('ok');
     fs.writeFileSync(path.join(t.dir, 'bin', 'isa'), sh('echo "isa $*" >> "$LOG"\nexit 1'), { mode: 0o755 });
@@ -95,7 +95,34 @@ export async function run(): Promise<void> {
       escaped = e;
     }
     assert.strictEqual(escaped, null, 'maybeUpgrade must never reject on refresh failure');
-    assert.ok(t.said.some((m) => m.includes('catalog refresh failed')), `refresh failure not logged: ${t.said}`);
+    assert.ok(t.warned.some((m) => m.includes('catalog refresh failed')), `refresh failure not logged at warn: ${t.warned}`);
+  }
+
+  // uv missing: the spawn is never attempted; the failure is logged at warn, the refresh still runs.
+  {
+    const t = setup('ok');
+    fs.rmSync(path.join(t.dir, 'uv', 'uv'));
+    await t.call();
+    assert.ok(
+      t.warned.some((m) => m === 'simdref upgrade failed: uv is missing'),
+      `missing uv not logged at warn: ${t.warned}`,
+    );
+    assert.strictEqual(
+      t.lines().filter((l) => l === 'isa vaddps --short').length,
+      1,
+      `failed upgrade must still refresh once: ${t.lines()}`,
+    );
+  }
+
+  // isa missing: the spawn is never attempted; the failure is logged at warn.
+  {
+    const t = setup('ok');
+    fs.rmSync(path.join(t.dir, 'bin', 'isa'));
+    await t.call();
+    assert.ok(
+      t.warned.some((m) => m === 'simdref catalog refresh failed: isa is missing'),
+      `missing isa not logged at warn: ${t.warned}`,
+    );
   }
 
   // PATH install: no binary runs, no marker.

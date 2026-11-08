@@ -5,8 +5,8 @@ import { promisify } from 'util';
 import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import { exe, find } from './find';
-import { maybeUpgrade, uvEnv } from './update';
+import { find } from './find';
+import { maybeUpgrade, TIMEOUT_MS, uvEnv } from './update';
 
 const run = promisify(execFile);
 const URL = 'https://github.com/simd-labs/simdref';
@@ -17,6 +17,7 @@ const DOCUMENT_SELECTOR: vscode.DocumentSelector = [
   { scheme: 'file', pattern: '**/*.asm' },
   { scheme: 'file', language: 'c' },
   { scheme: 'file', language: 'cpp' },
+  { scheme: 'file', language: 'cuda-cpp' }, // VS Code core assigns cuda-cpp to .cu and .cuh
 ];
 const UV_VERSION = '0.12.23';
 const UV_TARGETS: Record<string, string> = {
@@ -26,6 +27,15 @@ const UV_TARGETS: Record<string, string> = {
   'darwin-arm64': 'aarch64-apple-darwin',
   'win32-x64': 'x86_64-pc-windows-msvc',
   'win32-arm64': 'aarch64-pc-windows-msvc',
+};
+// Pinned sha256 of each uv 0.12.23 release archive, per target.
+const UV_SHA256: Record<string, string> = {
+  'x86_64-unknown-linux-gnu': '9167d72b3319674b6303c4cbe071854bba13ebdf3d76b1a7cbdc175471fb66d6',
+  'aarch64-unknown-linux-gnu': '6524bd338177ed50d035d39354e12545e993bbeba2ecbddf0480c5b3a81d313f',
+  'x86_64-apple-darwin': '960da44cb4b73685206ddd250b19e0a117fa41095710c1038f081f5cb613efb4',
+  'aarch64-apple-darwin': '50487ae565ccd96e499056b4674d438f4c53170202617b4c759defe0c6a1b544',
+  'x86_64-pc-windows-msvc': '75d05de6762778c31ee183398de7dd15093fad0ed90b1f236d8205ea5ec00c90',
+  'aarch64-pc-windows-msvc': '13294e232ececbe709c06b74e6ced06f2a225ea5591476685362f22be56a50d5',
 };
 
 // Download the latest uv release into `dir`, then install simdref and its catalog with it.
@@ -41,7 +51,7 @@ async function install(dir: string, step: (m: string) => void): Promise<void> {
     return Buffer.from(await res.arrayBuffer());
   };
   const data = await get(url);
-  const want = (await get(`${url}.sha256`)).toString().trim().split(/\s+/)[0];
+  const want = UV_SHA256[target];
   const got = createHash('sha256').update(data).digest('hex');
   if (got !== want) throw new Error(`uv checksum mismatch: got ${got}, want ${want}`);
   const uvDir = path.join(dir, 'uv');
@@ -57,22 +67,28 @@ async function install(dir: string, step: (m: string) => void): Promise<void> {
     throw err;
   }
   // The tar.gz holds one top-level folder; the zip is flat. Windows tar reads zip.
-  await run('tar', ['-xf', archive, '-C', uvDir, ...(zip ? [] : ['--strip-components=1'])]);
+  const tar = find('tar', (process.env.PATH ?? '').split(path.delimiter));
+  if (!tar) throw new Error('tar not found on PATH');
+  await run(tar, ['-xf', archive, '-C', uvDir, ...(zip ? [] : ['--strip-components=1'])], { timeout: TIMEOUT_MS });
   fs.rmSync(archive, { force: true });
   const bin = path.join(dir, 'bin');
   // Keep every uv write inside the extension storage: tools, python builds, cache.
   const env = uvEnv(dir);
   step('installing simdref');
-  await run(path.join(uvDir, exe('uv')), ['tool', 'install', 'simdref'], { env });
+  const uv = find('uv', [uvDir]);
+  if (!uv) throw new Error(`uv is missing at ${uvDir}`);
+  await run(uv, ['tool', 'install', 'simdref'], { env, timeout: TIMEOUT_MS });
   step('running isa update');
-  await run(path.join(bin, exe('isa')), ['update'], { env });
+  const isa = find('isa', [bin]);
+  if (!isa) throw new Error(`isa is missing at ${bin}`);
+  await run(isa, ['update'], { env, timeout: TIMEOUT_MS });
 }
 
 let client: LanguageClient | undefined;
 
 // Find or install the server, then start the client. Runs at most once per window.
 // `out` receives both the install steps and the language client trace. Returns true when the client started.
-async function start(dir: string, out: vscode.LogOutputChannel, say: (m: string) => void): Promise<boolean> {
+async function start(dir: string, out: vscode.LogOutputChannel, say: (m: string) => void, warn: (m: string) => void): Promise<boolean> {
   const bin = path.join(dir, 'bin');
   try {
     let server =
@@ -98,12 +114,12 @@ async function start(dir: string, out: vscode.LogOutputChannel, say: (m: string)
     // Daily background upgrade of the extension-installed copy; never blocks the start.
     // A new simdref version takes effect at the next server start.
     // The background task never rejects; this catch is the boundary if that rule ever breaks.
-    void maybeUpgrade(dir, server, say).catch((e) => say(`simdref upgrade task failed: ${e instanceof Error ? e.message : String(e)}`));
+    void maybeUpgrade(dir, server, warn).catch((e) => say(`simdref upgrade task failed: ${e instanceof Error ? e.message : String(e)}`));
     // An old simdref-lsp (0.0.7 or older) on PATH has no inlay hints and fails silently. Check the capability once.
     if (!client.initializeResult?.capabilities.inlayHintProvider) {
       say(`warning: ${server} has no inlay hints`);
       void vscode.window.showWarningMessage(
-        `simdref-lsp at ${server} has no inlay hints. Run \`uv tool upgrade simdref\` (needs simdref 0.0.8 or newer).`,
+        `simdref-lsp at ${server} has no inlay hints. Run \`uv tool upgrade simdref\`.`,
       );
     }
     return true;
@@ -126,13 +142,17 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<{ log: str
     log.push(m);
     out.appendLine(m);
   };
+  const warn = (m: string) => {
+    log.push(m);
+    out.warn(m);
+  };
   // Do the install and the server start only when a matching document is open.
   let starting = false;
   const onDoc = (doc: vscode.TextDocument) => {
     if (starting || !vscode.languages.match(DOCUMENT_SELECTOR, doc)) return;
     starting = true;
     // A failed start clears the flag: the next matching document retries.
-    void start(ctx.globalStorageUri.fsPath, out, say).then((ok) => {
+    void start(ctx.globalStorageUri.fsPath, out, say, warn).then((ok) => {
       if (!ok) starting = false;
     });
   };

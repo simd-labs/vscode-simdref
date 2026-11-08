@@ -2,10 +2,10 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
-import { exe } from './find';
+import { find } from './find';
 
 const run = promisify(execFile);
-const TIMEOUT_MS = 10 * 60 * 1000;
+export const TIMEOUT_MS = 10 * 60 * 1000;
 
 // Every uv write stays inside the extension storage: tools, python builds, cache.
 export function uvEnv(dir: string): NodeJS.ProcessEnv {
@@ -21,12 +21,13 @@ export function uvEnv(dir: string): NodeJS.ProcessEnv {
 // Upgrade the extension-installed simdref once a day. Then refresh the catalog
 // with `isa vaddps --short` (0.4 s and 0 bytes when current) on every check,
 // also after a failed upgrade. A server from PATH is never touched. Failures
-// are logged, never shown. A new simdref version takes effect at the next
-// server start. The day marker update-DAY (DAY = Unix seconds / 86400) limits
-// this to one run a day across all windows: an existing marker ends the check.
-// shortcut: a check still running at midnight UTC can overlap the next day's
+// go to `warn`, never to the user. A new simdref version takes effect at the
+// next server start. The day marker update-DAY (DAY = Unix seconds / 86400)
+// limits this to one run a day across all windows: an existing marker ends
+// the check.
+// shortcut: a check running at midnight UTC can overlap the next day's
 // check, add an OS lock if that is ever reported.
-export async function maybeUpgrade(dir: string, server: string, say: (m: string) => void): Promise<void> {
+export async function maybeUpgrade(dir: string, server: string, warn: (m: string) => void): Promise<void> {
   const bin = path.join(dir, 'bin');
   if (path.dirname(server) !== bin) return;
   const day = Math.floor(Date.now() / 1000 / 86400);
@@ -45,14 +46,18 @@ export async function maybeUpgrade(dir: string, server: string, say: (m: string)
   }
   const env = uvEnv(dir);
   try {
-    await run(path.join(dir, 'uv', exe('uv')), ['tool', 'upgrade', 'simdref'], { env, timeout: TIMEOUT_MS });
+    const uv = find('uv', [path.join(dir, 'uv')]);
+    if (!uv) throw new Error('uv is missing');
+    await run(uv, ['tool', 'upgrade', 'simdref'], { env, timeout: TIMEOUT_MS });
   } catch (e) {
-    say(`simdref upgrade failed: ${e instanceof Error ? e.message : String(e)}`);
+    warn(`simdref upgrade failed: ${e instanceof Error ? e.message : String(e)}`);
   }
   // Downloads the catalog after a version change. Runs on every check: an unchanged catalog costs 0.4 s, 0 bytes.
   try {
-    await run(path.join(bin, exe('isa')), ['vaddps', '--short'], { env, timeout: TIMEOUT_MS });
+    const isa = find('isa', [bin]);
+    if (!isa) throw new Error('isa is missing');
+    await run(isa, ['vaddps', '--short'], { env, timeout: TIMEOUT_MS });
   } catch (e) {
-    say(`simdref catalog refresh failed: ${e instanceof Error ? e.message : String(e)}`);
+    warn(`simdref catalog refresh failed: ${e instanceof Error ? e.message : String(e)}`);
   }
 }

@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # Run one integration test mode in a rootless podman container under Xvfb.
-# Usage: test/podman/run.sh hints|error|install|lazystart|nohints
+# Usage: test/podman/run.sh hints|error|install|lazystart|nohints|shot
 # Env:   SIMDREF_CATALOG  catalog.db file, mounted read-only (modes hints and lazystart)
 #        SIMDREF_SRC      simdref source tree, optional (modes hints and lazystart; without it, image vsc-sim gets simdref from PyPI)
 #        VSCODE_VERSION   VS Code version (default 1.140.0)
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-mode=${1:?usage: run.sh hints|error|install|lazystart|nohints}
+mode=${1:?usage: run.sh hints|error|install|lazystart|nohints|shot}
 ver=${VSCODE_VERSION:-1.140.0}
 exe=.vscode-test/vscode-linux-x64-$ver/code
 low=(nice -n 19 ionice -c 3)
 net=() mounts=()
 
 case $mode in
-  hints | lazystart) image=vsc-sim ;;
+  hints | lazystart | shot) image=vsc-sim ;;
   nohints) image=vsc-stub ;;
   install) image=vsc-clean ;;
   error) image=vsc-clean net=(--network none) ;; # the extension must fail to download uv
@@ -47,6 +47,13 @@ run=(podman run --userns=keep-id:uid=1000,gid=1000 -v "$PWD:/ext")
 name=vsc-$mode-$$
 trap 'podman rm -f "$name" >/dev/null 2>&1 || true' EXIT
 "${low[@]}" "${run[@]}" -d --name "$name" "${net[@]}" "${mounts[@]}" "$image" \
-  sh -c 'Xvfb :99 -screen 0 1280x1024x24 & sleep infinity' >/dev/null
+  sh -c 'Xvfb :99 -screen 0 1600x1000x24 & sleep infinity' >/dev/null
 sleep 2
-podman exec -e DISPLAY=:99 -e SIMDREF_MODE="$mode" -e VSCODE_EXE="/ext/$exe" "$name" node out/test/runTest.js
+if [ "$mode" = shot ]; then
+  mkdir -p .shots .vsc-user/User
+  # The bundled chat extension starts an agent host that crashes the headless renderer; keep it off.
+  printf '%s' '{ "github.copilot-chat": { "enabled": false }, "github.copilot": { "enabled": false } }' > .vsc-user/User/settings.json
+  podman exec -e DISPLAY=:99 -e SHOT=1 -e SHOT_DIR=/ext/.shots -e VSCODE_USER_DIR=/ext/.vsc-user -e VSCODE_EXE="/ext/$exe" "$name" node out/test/runTest.js
+else
+  podman exec -e DISPLAY=:99 -e SIMDREF_MODE="$mode" -e VSCODE_EXE="/ext/$exe" "$name" node out/test/runTest.js
+fi

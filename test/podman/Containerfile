@@ -2,6 +2,7 @@
 FROM docker.io/library/node:22-bookworm-slim AS base
 RUN apt-get update && apt-get install -y --no-install-recommends \
       xvfb xauth python3 python3-venv python3-pip ca-certificates tar xz-utils \
+      imagemagick xdotool \
       libgtk-3-0 libnss3 libasound2 libgbm1 libxss1 libxkbfile1 libsecret-1-0 \
       libatk-bridge2.0-0 libdrm2 libxtst6 libxshmfence1 libx11-xcb1 dbus \
     && rm -rf /var/lib/apt/lists/*
@@ -25,7 +26,7 @@ RUN python3 -m venv /opt/sr \
     && if [ -f /tmp/simdref-src/pyproject.toml ]; then \
          /opt/sr/bin/pip install --no-cache-dir /tmp/simdref-src; \
        else \
-         /opt/sr/bin/pip install --no-cache-dir simdref; \
+         /opt/sr/bin/pip install --no-cache-dir simdref==0.0.16; \
        fi \
     && rm -rf /tmp/simdref-src \
     && ln -s /opt/sr/bin/simdref-lsp /usr/local/bin/simdref-lsp
