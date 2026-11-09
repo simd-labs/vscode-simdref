@@ -6,7 +6,7 @@
 ![simdref hover on a .cpp file in VS Code](https://raw.githubusercontent.com/simd-labs/vscode-simdref/581d5d5712e8a723994b5acc5fc69d5f3872f732/vscode-cpp-hover.png)
 
 The extension connects VS Code to `simdref-lsp`, the language server of [simdref](https://github.com/simd-labs/simdref).
-In `.s`, `.S`, `.asm` files and `asm(...)` strings in C/C++, it shows a one-line brief of each instruction inline.
+In `.s`, `.S`, `.asm` and `.ptx` files and `asm(...)` strings in C/C++, it shows a one-line brief of each instruction inline.
 In CUDA files (`.cu`, `.cuh`), it shows the same brief.
 VS Code has no NASM language, so `.nasm` files get no hints.
 

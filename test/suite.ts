@@ -21,6 +21,13 @@ const CPP = ['int main() {', '  asm volatile("vaddps %ymm1, %ymm2, %ymm0");', ' 
 const CPP_HINT_LINES = [1];
 const CU = ['__global__ void k() {', '  asm("vaddps %ymm1, %ymm2, %ymm0");', '}'].join('\n');
 const CU_HINT_LINES = [1];
+const PTX = [
+  'add.s32 %r1, %r2, %r3;',
+  'ld.global.nc.f32 %f1, [%rd1];',
+  'shfl.sync.idx.b32 %r4, %r5, 0, 31, -1;',
+  '',
+].join('\n');
+const PTX_HINT_LINES = [0, 1, 2];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -144,6 +151,17 @@ export async function run(): Promise<void> {
       await check(dir, 'fixture.s', ASM, ASM_HINT_LINES);
       await check(dir, 'fixture.cpp', CPP, CPP_HINT_LINES);
       await check(dir, 'fixture.cu', CU, CU_HINT_LINES);
+      // A .ptx file opens as plaintext; the pattern-only selector must still attach the server.
+      {
+        const f = path.join(dir, 'fixture.ptx');
+        fs.writeFileSync(f, PTX);
+        const doc = await vscode.workspace.openTextDocument(f);
+        await vscode.window.showTextDocument(doc);
+        const hints = await hintLines(doc, PTX_HINT_LINES.length);
+        const label = (h: vscode.InlayHint) => (typeof h.label === 'string' ? h.label : h.label.map((p) => p.value).join(''));
+        console.log('fixture.ptx', JSON.stringify(hints.map((h) => [h.position.line, label(h)])));
+        assert.deepStrictEqual(hints.map((h) => h.position.line).sort(), PTX_HINT_LINES, 'fixture.ptx: hint lines');
+      }
     }
   }
 }

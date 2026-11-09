@@ -26,7 +26,7 @@ RUN python3 -m venv /opt/sr \
     && if [ -f /tmp/simdref-src/pyproject.toml ]; then \
          /opt/sr/bin/pip install --no-cache-dir /tmp/simdref-src; \
        else \
-         /opt/sr/bin/pip install --no-cache-dir simdref==0.0.16; \
+         /opt/sr/bin/pip install --no-cache-dir simdref==0.0.17; \
        fi \
     && rm -rf /tmp/simdref-src \
     && ln -s /opt/sr/bin/simdref-lsp /usr/local/bin/simdref-lsp

@@ -15,6 +15,8 @@ const DOCUMENT_SELECTOR: vscode.DocumentSelector = [
   { scheme: 'file', pattern: '**/*.s' },
   { scheme: 'file', pattern: '**/*.S' },
   { scheme: 'file', pattern: '**/*.asm' },
+  // VS Code has no PTX language; .ptx files open as plaintext and match on the pattern alone.
+  { scheme: 'file', pattern: '**/*.ptx' },
   { scheme: 'file', language: 'c' },
   { scheme: 'file', language: 'cpp' },
   { scheme: 'file', language: 'cuda-cpp' }, // VS Code core assigns cuda-cpp to .cu and .cuh
